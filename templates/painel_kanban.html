@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel CRM - Fiat Globo WhatsApp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .kanban-column {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            min-height: 400px;
+        }
+
+        .column-header {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-novo { background: #3498db; }
+        .status-atendimento { background: #f39c12; }
+        .status-proposta { background: #9b59b6; }
+        .status-agendado { background: #1abc9c; }
+        .status-vendido { background: #27ae60; }
+        .status-perdido { background: #e74c3c; }
+
+        .lead-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: move;
+            transition: all 0.3s ease;
+        }
+
+        .lead-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .lead-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .lead-phone {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .lead-interest {
+            background: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #34495e;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .lead-time {
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+
+        .actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background-color 0.3s;
+        }
+
+        .btn-message {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-message:hover {
+            background: #2980b9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .empty-column {
+            text-align: center;
+            color: #bdc3c7;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
+        @media (max-width: 768px) {
+            .kanban-board {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 CRM Fiat Globo WhatsApp</h1>
+        <p>Gestão Inteligente de Leads e Vendas</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="total-leads">0</div>
+            <div class="stat-label">Total de Leads</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="leads-ativos">0</div>
+            <div class="stat-label">Leads Ativos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="vendas-mes">0</div>
+            <div class="stat-label">Vendas do Mês</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="taxa-conversao">0%</div>
+            <div class="stat-label">Taxa de Conversão</div>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <div class="kanban-column">
+            <div class="column-header status-novo">
+                🆕 Novos ({{ leads_por_status['Novo']|length }})
+            </div>
+            <div class="leads-container" data-status="Novo">
+                {% for lead in leads_por_status['Novo'] %}
+                <div class="lead-card" data-phone="{{ lead.phone }}">
+                    <div class="lead-name">{{ lead.nome_cliente or 'Cliente' }}</div>
+                    <div class="lead-phone">{{ lead.phone }}</div>
+                    {% if lead.interesse %}
+                    <div class="lead-interest">{{ lead.interesse }}</div>
+                    {% endif %}
+                    <div class="lead-time">{{ lead.ultima_interacao or 'Agora' }}</div>
+                    <div class="actions">
+                        <button class="btn btn-message" onclick="sendMessage('{{ lead.phone }}')">💬 Mensagem</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-column">Nenhum lead novo</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header status-atendimento">
+                🔄 Em Atendimento ({{ leads_por_status['Em Atendimento']|length }})
+            </div>
+            <div class="leads-container" data-status="Em Atendimento">
+                {% for lead in leads_por_status['Em Atendimento'] %}
+                <div class="lead-card" data-phone="{{ lead.phone }}">
+                    <div class="lead-name">{{ lead.nome_cliente or 'Cliente' }}</div>
+                    <div class="lead-phone">{{ lead.phone }}</div>
+                    {% if lead.interesse %}
+                    <div class="lead-interest">{{ lead.interesse }}</div>
+                    {% endif %}
+                    <div class="lead-time">{{ lead.ultima_interacao or 'Agora' }}</div>
+                    <div class="actions">
+                        <button class="btn btn-message" onclick="sendMessage('{{ lead.phone }}')">💬 Mensagem</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-column">Nenhum lead em atendimento</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header status-proposta">
+                📋 Proposta Enviada ({{ leads_por_status['Proposta Enviada']|length }})
+            </div>
+            <div class="leads-container" data-status="Proposta Enviada">
+                {% for lead in leads_por_status['Proposta Enviada'] %}
+                <div class="lead-card" data-phone="{{ lead.phone }}">
+                    <div class="lead-name">{{ lead.nome_cliente or 'Cliente' }}</div>
+                    <div class="lead-phone">{{ lead.phone }}</div>
+                    {% if lead.interesse %}
+                    <div class="lead-interest">{{ lead.interesse }}</div>
+                    {% endif %}
+                    <div class="lead-time">{{ lead.ultima_interacao or 'Agora' }}</div>
+                    <div class="actions">
+                        <button class="btn btn-message" onclick="sendMessage('{{ lead.phone }}')">💬 Mensagem</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-column">Nenhuma proposta pendente</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header status-agendado">
+                📅 Agendado ({{ leads_por_status['Agendado']|length }})
+            </div>
+            <div class="leads-container" data-status="Agendado">
+                {% for lead in leads_por_status['Agendado'] %}
+                <div class="lead-card" data-phone="{{ lead.phone }}">
+                    <div class="lead-name">{{ lead.nome_cliente or 'Cliente' }}</div>
+                    <div class="lead-phone">{{ lead.phone }}</div>
+                    {% if lead.interesse %}
+                    <div class="lead-interest">{{ lead.interesse }}</div>
+                    {% endif %}
+                    <div class="lead-time">{{ lead.ultima_interacao or 'Agora' }}</div>
+                    <div class="actions">
+                        <button class="btn btn-message" onclick="sendMessage('{{ lead.phone }}')">💬 Mensagem</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-column">Nenhum agendamento</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header status-vendido">
+                ✅ Vendido ({{ leads_por_status['Vendido']|length }})
+            </div>
+            <div class="leads-container" data-status="Vendido">
+                {% for lead in leads_por_status['Vendido'] %}
+                <div class="lead-card" data-phone="{{ lead.phone }}">
+                    <div class="lead-name">{{ lead.nome_cliente or 'Cliente' }}</div>
+                    <div class="lead-phone">{{ lead.phone }}</div>
+                    {% if lead.interesse %}
+                    <div class="lead-interest">{{ lead.interesse }}</div>
+                    {% endif %}
+                    <div class="lead-time">{{ lead.ultima_interacao or 'Agora' }}</div>
+                </div>
+                {% else %}
+                <div class="empty-column">Nenhuma venda</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header status-perdido">
+                ❌ Perdido ({{ leads_por_status['Perdido']|length }})
+            </div>
+            <div class="leads-container" data-status="Perdido">
+                {% for lead in leads_por_status['Perdido'] %}
+                <div class="lead-card" data-phone="{{ lead.phone }}">
+                    <div class="lead-name">{{ lead.nome_cliente or 'Cliente' }}</div>
+                    <div class="lead-phone">{{ lead.phone }}</div>
+                    {% if lead.interesse %}
+                    <div class="lead-interest">{{ lead.interesse }}</div>
+                    {% endif %}
+                    <div class="lead-time">{{ lead.ultima_interacao or 'Agora' }}</div>
+                </div>
+                {% else %}
+                <div class="empty-column">Nenhum lead perdido</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Função para enviar mensagem manual
+        function sendMessage(phone) {
+            const message = prompt('Digite a mensagem para ' + phone + ':');
+            if (message) {
+                fetch('/api/send-message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        message: message
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Mensagem enviada com sucesso!');
+                    } else {
+                        alert('Erro ao enviar mensagem: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Erro: ' + error);
+                });
+            }
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            const totalLeads = document.querySelectorAll('.lead-card').length;
+            const leadsAtivos = document.querySelectorAll('[data-status="Novo"], [data-status="Em Atendimento"], [data-status="Proposta Enviada"], [data-status="Agendado"]').length;
+            const vendas = document.querySelectorAll('[data-status="Vendido"] .lead-card').length;
+            const taxaConversao = totalLeads > 0 ? Math.round((vendas / totalLeads) * 100) : 0;
+
+            document.getElementById('total-leads').textContent = totalLeads;
+            document.getElementById('leads-ativos').textContent = leadsAtivos;
+            document.getElementById('vendas-mes').textContent = vendas;
+            document.getElementById('taxa-conversao').textContent = taxaConversao + '%';
+        }
+
+        // Atualizar estatísticas ao carregar
+        updateStats();
+
+        // Auto-refresh a cada 30 segundos
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>
+
