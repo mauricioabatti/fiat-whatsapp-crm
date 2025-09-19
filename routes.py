@@ -54,6 +54,11 @@ def send_via_twilio_api(to_phone_e164: str, body: str) -> bool:
         log.exception("Falha ao enviar WhatsApp via Twilio API")
         return False
 
+@bp.route("/whatsapp", methods=["GET"])
+def whatsapp_test():
+    return "Webhook WhatsApp funcionando! Use POST para enviar mensagens."
+
+
 # ========================
 # Rota principal do WhatsApp
 # ========================
