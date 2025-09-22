@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
-CMD gunicorn wsgi:app -b 0.0.0.0:${PORT:-5000} --workers 1 --threads 4 --timeout 120
+CMD ["sh", "/app/start.sh"]
